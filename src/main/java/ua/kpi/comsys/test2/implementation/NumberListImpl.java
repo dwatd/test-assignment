@@ -124,7 +124,7 @@ public class NumberListImpl implements NumberList {
                 byte digit = (byte) Character.digit(c, base);
                 add(digit);
             }
-        } catch (NumberFormatException | IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             // Якщо рядок невалідний або цифри не підходять для поточної бази, створюємо порожній список
             clear();
         }
