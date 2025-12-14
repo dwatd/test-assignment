@@ -31,9 +31,10 @@ import ua.kpi.comsys.test2.NumberList;
  */
 public class NumberListImpl implements NumberList {
 
-    private static final int BASE = 8; // вісімкова система
+    private static final int DEFAULT_BASE = 8; // вісімкова система за замовчуванням
     private static final int ADDITIONAL_BASE = 10; // десяткова система для changeScale
 
+    private final int base; // основа системи числення
     private Node head; // голова списку
     private int size; // розмір списку
 
@@ -52,6 +53,16 @@ public class NumberListImpl implements NumberList {
      * Default constructor. Returns empty <tt>NumberListImpl</tt>
      */
     public NumberListImpl() {
+        this(DEFAULT_BASE);
+    }
+
+    /**
+     * Constructor with custom base.
+     *
+     * @param base - base of number system
+     */
+    private NumberListImpl(int base) {
+        this.base = base;
         this.head = null;
         this.size = 0;
     }
@@ -71,7 +82,8 @@ public class NumberListImpl implements NumberList {
                 convertFromDecimal(line.trim());
             }
         } catch (IOException e) {
-            throw new RuntimeException("Помилка читання файлу", e);
+            // Якщо файл не знайдено, створюємо порожній список
+            // (список вже порожній після виклику this())
         }
     }
 
@@ -87,22 +99,27 @@ public class NumberListImpl implements NumberList {
         convertFromDecimal(value);
     }
 
-    // Конвертує десяткове число в вісімкове і додає в список
+    // Конвертує десяткове число у систему з поточною базою і додає в список
     private void convertFromDecimal(String decimalValue) {
-        if (decimalValue == null || decimalValue.isEmpty() || decimalValue.equals("0")) {
-            add((byte) 0);
-            return;
-        }
+        try {
+            if (decimalValue == null || decimalValue.isEmpty() || decimalValue.equals("0")) {
+                add((byte) 0);
+                return;
+            }
 
-        // Переводимо з 10-кової в 8-кову систему
-        BigInteger decimal = new BigInteger(decimalValue);
-        String octalString = decimal.toString(BASE);
+            // Переводимо з 10-кової у систему з base
+            BigInteger decimal = new BigInteger(decimalValue);
+            String baseString = decimal.toString(base);
 
-        // Додаємо кожну цифру в список
-        for (int i = 0; i < octalString.length(); i++) {
-            char c = octalString.charAt(i);
-            byte digit = (byte) Character.digit(c, BASE);
-            add(digit);
+            // Додаємо кожну цифру в список
+            for (int i = 0; i < baseString.length(); i++) {
+                char c = baseString.charAt(i);
+                byte digit = (byte) Character.digit(c, base);
+                add(digit);
+            }
+        } catch (NumberFormatException e) {
+            // Якщо рядок невалідний, створюємо порожній список
+            clear();
         }
     }
 
@@ -141,17 +158,14 @@ public class NumberListImpl implements NumberList {
      * @return <tt>NumberListImpl</tt> in other scale of notation.
      */
     public NumberListImpl changeScale() {
-        // Переводимо з вісімкової (поточна) в десяткову (додаткова система)
+        // Переводимо з поточної системи в десяткову
         String decimalValue = toDecimalString();
 
-        // Створюємо новий список для десяткової системи
-        NumberListImpl result = new NumberListImpl();
+        // Створюємо новий список для додаткової системи числення (десяткової)
+        NumberListImpl result = new NumberListImpl(ADDITIONAL_BASE);
 
-        // Додаємо кожну десяткову цифру
-        for (int i = 0; i < decimalValue.length(); i++) {
-            byte digit = (byte) Character.digit(decimalValue.charAt(i), ADDITIONAL_BASE);
-            result.add(digit);
-        }
+        // Конвертуємо з десяткової в додаткову систему
+        result.convertFromDecimal(decimalValue);
 
         return result;
     }
@@ -168,18 +182,14 @@ public class NumberListImpl implements NumberList {
      * @return result of additional operation.
      */
     public NumberListImpl additionalOperation(NumberList arg) {
-        // Додаткова операція: ціле ділення (С7 = 3)
-        String dividend = this.toDecimalString();
-        String divisor = ((NumberListImpl) arg).toDecimalString();
+        // Додаткова операція: віднімання (С7 = 1)
+        String minuend = this.toDecimalString();
+        String subtrahend = ((NumberListImpl) arg).toDecimalString();
 
-        BigInteger a = new BigInteger(dividend);
-        BigInteger b = new BigInteger(divisor);
+        BigInteger a = new BigInteger(minuend);
+        BigInteger b = new BigInteger(subtrahend);
 
-        if (b.equals(BigInteger.ZERO)) {
-            throw new ArithmeticException("Ділення на нуль");
-        }
-
-        BigInteger result = a.divide(b);
+        BigInteger result = a.subtract(b);
         return new NumberListImpl(result.toString());
     }
 
@@ -195,10 +205,10 @@ public class NumberListImpl implements NumberList {
             return "0";
         }
 
-        // Переводимо з вісімкової в десяткову
-        String octalString = toString();
-        BigInteger octalValue = new BigInteger(octalString, BASE);
-        return octalValue.toString(10);
+        // Переводимо з поточної системи в десяткову
+        String baseString = toString();
+        BigInteger baseValue = new BigInteger(baseString, base);
+        return baseValue.toString(10);
     }
 
 
@@ -323,8 +333,8 @@ public class NumberListImpl implements NumberList {
             throw new NullPointerException("Null елементи не дозволені");
         }
 
-        if (e < 0 || e >= BASE) {
-            throw new IllegalArgumentException("Цифра має бути в діапазоні [0, " + (BASE - 1) + "]");
+        if (e < 0 || e >= base) {
+            throw new IllegalArgumentException("Цифра має бути в діапазоні [0, " + (base - 1) + "]");
         }
 
         Node newNode = new Node(e);
@@ -501,8 +511,8 @@ public class NumberListImpl implements NumberList {
             throw new NullPointerException("Null елементи не дозволені");
         }
 
-        if (element < 0 || element >= BASE) {
-            throw new IllegalArgumentException("Цифра має бути в діапазоні [0, " + (BASE - 1) + "]");
+        if (element < 0 || element >= base) {
+            throw new IllegalArgumentException("Цифра має бути в діапазоні [0, " + (base - 1) + "]");
         }
 
         Node node = getNode(index);
@@ -522,8 +532,8 @@ public class NumberListImpl implements NumberList {
             throw new NullPointerException("Null елементи не дозволені");
         }
 
-        if (element < 0 || element >= BASE) {
-            throw new IllegalArgumentException("Цифра має бути в діапазоні [0, " + (BASE - 1) + "]");
+        if (element < 0 || element >= base) {
+            throw new IllegalArgumentException("Цифра має бути в діапазоні [0, " + (base - 1) + "]");
         }
 
         if (index == size) {
@@ -709,8 +719,8 @@ public class NumberListImpl implements NumberList {
             if (e == null) {
                 throw new NullPointerException("Null елементи не дозволені");
             }
-            if (e < 0 || e >= BASE) {
-                throw new IllegalArgumentException("Цифра має бути в діапазоні [0, " + (BASE - 1) + "]");
+            if (e < 0 || e >= base) {
+                throw new IllegalArgumentException("Цифра має бути в діапазоні [0, " + (base - 1) + "]");
             }
             lastReturned.data = e;
         }
@@ -720,8 +730,8 @@ public class NumberListImpl implements NumberList {
             if (e == null) {
                 throw new NullPointerException("Null елементи не дозволені");
             }
-            if (e < 0 || e >= BASE) {
-                throw new IllegalArgumentException("Цифра має бути в діапазоні [0, " + (BASE - 1) + "]");
+            if (e < 0 || e >= base) {
+                throw new IllegalArgumentException("Цифра має бути в діапазоні [0, " + (base - 1) + "]");
             }
 
             NumberListImpl.this.add(index, e);
