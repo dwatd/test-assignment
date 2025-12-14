@@ -26,7 +26,7 @@ import ua.kpi.comsys.test2.NumberList;
  * Використовується кільцевий двонаправлений зв'язний список.
  *
  * @author Семенюк Катерина Василівна
- * Група: ІС-33
+ * Група: ІС-33 
  * Варіант: 17
  */
 public class NumberListImpl implements NumberList {
