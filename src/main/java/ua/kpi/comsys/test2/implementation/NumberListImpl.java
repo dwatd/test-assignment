@@ -109,6 +109,13 @@ public class NumberListImpl implements NumberList {
 
             // Переводимо з 10-кової у систему з base
             BigInteger decimal = new BigInteger(decimalValue);
+
+            // Перевіряємо, чи число не від'ємне
+            if (decimal.signum() < 0) {
+                clear();
+                return;
+            }
+
             String baseString = decimal.toString(base);
 
             // Додаємо кожну цифру в список
@@ -117,8 +124,8 @@ public class NumberListImpl implements NumberList {
                 byte digit = (byte) Character.digit(c, base);
                 add(digit);
             }
-        } catch (NumberFormatException e) {
-            // Якщо рядок невалідний, створюємо порожній список
+        } catch (NumberFormatException | IllegalArgumentException e) {
+            // Якщо рядок невалідний або цифри не підходять для поточної бази, створюємо порожній список
             clear();
         }
     }
